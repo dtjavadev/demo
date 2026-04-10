@@ -1,5 +1,3 @@
-def appImage
-
 pipeline {
   agent any
 
@@ -10,7 +8,7 @@ pipeline {
 
   environment {
     APP_NAME = 'demo'
-    IMAGE_TAG = "${APP_NAME}:${env.BUILD_NUMBER}"
+    IMAGE_NAME = "demo:${env.BUILD_NUMBER}"
     CONTAINER_NAME = 'demo-app'
     APP_PORT = '8080'
   }
@@ -22,48 +20,37 @@ pipeline {
       }
     }
 
-    stage('Test (Gradle)') {
+    stage('Build (Gradle)') {
       steps {
-        script {
-          docker.image('gradle:8.7-jdk17').inside {
-            sh 'chmod +x ./gradlew || true'
-            sh './gradlew --no-daemon clean test'
-          }
-        }
+        sh 'chmod +x ./gradlew'
+        sh './gradlew --no-daemon clean test bootJar'
       }
     }
 
     stage('Build Docker image') {
       steps {
-        script {
-          appImage = docker.build(env.IMAGE_TAG)
-        }
+        sh 'docker build -t "$IMAGE_NAME" .'
       }
     }
 
     stage('Run Docker container') {
       steps {
-        script {
-          // Keep a single stable container name per environment.
-          // We still shell out for cleanup because the Docker Pipeline API does not expose
-          // "remove container by name" helpers directly.
-          sh """
-            set -eux
-            if docker ps -a --format '{{.Names}}' | grep -qx '${env.CONTAINER_NAME}'; then
-              docker rm -f '${env.CONTAINER_NAME}'
-            fi
-          """
+        sh '''
+          set -eux
 
-          // Leaves the container running after the build (same behavior as your original pipeline).
-          appImage.run("--name ${env.CONTAINER_NAME} -p ${env.APP_PORT}:8080")
-        }
+          if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+            docker rm -f "$CONTAINER_NAME"
+          fi
+
+          docker run -d --name "$CONTAINER_NAME" -p "$APP_PORT:$APP_PORT" "$IMAGE_NAME"
+        '''
       }
     }
   }
 
   post {
     always {
-      echo "Image: ${env.IMAGE_TAG}, container: ${env.CONTAINER_NAME}, port: ${env.APP_PORT}"
+      echo "Image: ${env.IMAGE_NAME}, container: ${env.CONTAINER_NAME}"
     }
   }
 }
