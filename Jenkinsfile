@@ -1,22 +1,9 @@
 pipeline {
-  agent {
-    docker {
-      image 'jenkins/inbound-agent:latest-alpine-jdk17'
-      args '-u 0:0'
-      reuseNode true
-    }
-  }
+  agent any
 
   options {
     timestamps()
     ansiColor('xterm')
-  }
-
-  environment {
-    APP_NAME = 'demo'
-    IMAGE_NAME = "demo:${env.BUILD_NUMBER}"
-    CONTAINER_NAME = 'demo-app'
-    APP_PORT = '9090'
   }
 
   stages {
@@ -26,38 +13,31 @@ pipeline {
       }
     }
 
-    stage('Build (Gradle)') {
+    stage('Build') {
       steps {
         sh 'chmod +x ./gradlew'
-        sh './gradlew --no-daemon clean test bootJar'
+        sh './gradlew --no-daemon clean bootJar'
       }
     }
 
-    stage('Build Docker image') {
+    stage('Test') {
       steps {
-        sh 'docker build -t "$IMAGE_NAME" .'
+        sh './gradlew --no-daemon test'
       }
     }
 
-    stage('Run Docker container') {
+    stage('Run (smoke)') {
       steps {
         sh '''
-          set -eux
-
-          if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
-            docker rm -f "$CONTAINER_NAME"
-          fi
-
-          docker run -d --name "$CONTAINER_NAME" -p "$APP_PORT:$APP_PORT" "$IMAGE_NAME"
+          set -eu
+          JAR="$(ls -1 build/libs/*.jar | grep -v -- '-plain.jar' | head -n 1)"
+          echo "Running: $JAR --help"
+          java -jar "$JAR" --help >/dev/null
         '''
       }
     }
   }
 
-  post {
-    always {
-      echo "Image: ${env.IMAGE_NAME}, container: ${env.CONTAINER_NAME}"
-    }
-  }
+  post { always { echo 'Pipeline finished.' } }
 }
 
