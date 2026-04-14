@@ -10,7 +10,7 @@ pipeline {
     APP_NAME = 'demo'
     IMAGE_NAME = "demo:${env.BUILD_NUMBER}"
     CONTAINER_NAME = 'demo-app'
-    APP_PORT = '8080'
+    APP_PORT = '9090'
   }
 
   stages {
