@@ -1,5 +1,5 @@
 pipeline {
-  agent { label 'docker-cloud' }
+  agent { label 'docker-agent' }
 
   options {
     timestamps()
