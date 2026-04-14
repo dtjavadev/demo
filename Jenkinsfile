@@ -1,5 +1,11 @@
 pipeline {
-  agent any
+  agent {
+    docker {
+      image 'jenkins/inbound-agent:latest-alpine-jdk17'
+      args '-u 0:0'
+      reuseNode true
+    }
+  }
 
   options {
     timestamps()
