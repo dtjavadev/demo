@@ -25,6 +25,12 @@ pipeline {
         sh './gradlew --no-daemon test'
       }
     }
+
+    stage('Docker Build') {
+      steps {
+        sh 'docker build -t demo:${env.BUILD_NUMBER} .'
+      }
+    }
   }
 
   post { always { echo 'Pipeline finished.' } }
