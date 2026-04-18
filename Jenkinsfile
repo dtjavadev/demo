@@ -34,9 +34,9 @@ pipeline {
 
     stage('Push Docker image to Nexus') {
       environment {
-        NEXUS_REGISTRY = 'nexus:5000'
+        NEXUS_REGISTRY = 'localhost:5000'
         // Must match your Nexus docker (hosted) repository name; change if different.
-        TARGET_IMAGE   = "nexus:5000/docker-hosted/demo:${BUILD_NUMBER}"
+        TARGET_IMAGE   = "localhost:5000/docker-hosted/demo:${BUILD_NUMBER}"
       }
       steps {
         withCredentials([usernamePassword(credentialsId: 'nexus-docker-creds',
