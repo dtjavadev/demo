@@ -1,4 +1,5 @@
-# Optional stack for OTLP export (profile: otel). UI: http://localhost:16686
+# Optional Jaeger stack. UI: http://localhost:16686
+# OTLP HTTP on host 14318 avoids clashing with Grafana Stack (otel-collector uses host 4318).
 services:
   jaeger:
     image: jaegertracing/all-in-one:1.76
@@ -6,4 +7,4 @@ services:
       COLLECTOR_OTLP_ENABLED: "true"
     ports:
       - "16686:16686"
-      - "4318:4318"
+      - "14318:4318"
