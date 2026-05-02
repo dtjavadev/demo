@@ -1,0 +1,11 @@
+# Activate with: --spring.profiles.active=otel
+# Grafana Stack: docker compose -f docker-compose.grafana-stack.yml up -d
+# Traces are sent via OTLP HTTP to the local OpenTelemetry Collector (default: http://localhost:4318/v1/traces)
+# Metrics: still scrape /actuator/prometheus (Prometheus pull model).
+management:
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          enabled: true
+          endpoint: http://localhost:4318/v1/traces

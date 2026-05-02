@@ -1,0 +1,64 @@
+# Grafana Stack (metrics + traces + logs) for local dev
+#
+# Start:
+#   docker compose -f docker-compose.grafana-stack.yml up -d
+#
+# URLs:
+#   Grafana:    http://localhost:3000   (admin/admin)
+#   Prometheus: http://localhost:9090
+#
+# App integration:
+#   - Metrics: scrape http://host.docker.internal:8080/actuator/prometheus
+#   - Traces:  run app with --spring.profiles.active=otel and send OTLP to collector
+services:
+  prometheus:
+    image: prom/prometheus:v3.6.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  tempo:
+    image: grafana/tempo:2.8.2
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    ports:
+      - "3200:3200"   # tempo query
+      # OTLP 4317/4318: only otel-collector publishes these on the host; Tempo still receives traces at tempo:4318 inside the compose network.
+    volumes:
+      - ./observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+
+  loki:
+    image: grafana/loki:3.5.1
+    command: ["-config.file=/etc/loki/loki.yml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./observability/loki/loki.yml:/etc/loki/loki.yml:ro
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.132.0
+    command: ["--config=/etc/otelcol-contrib/config.yml"]
+    ports:
+      - "4318:4318"   # OTLP HTTP from the app
+      - "4317:4317"   # OTLP gRPC from the app (optional)
+    volumes:
+      - ./observability/otel-collector/config.yml:/etc/otelcol-contrib/config.yml:ro
+    depends_on:
+      - tempo
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: "admin"
+      GF_SECURITY_ADMIN_PASSWORD: "admin"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
